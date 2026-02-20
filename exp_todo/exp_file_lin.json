@@ -1,0 +1,1 @@
+{"name": "LIN1D_5", "model_name": "Linear_1D", "loss_name": "CE", "num_epochs": 20, "batch_size": 16, "learning_rate": 0.001, "hidden_channels": [32, 32, 16, 16, 32, 32]}

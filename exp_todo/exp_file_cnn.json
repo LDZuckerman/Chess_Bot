@@ -1,0 +1,1 @@
+{"name": "CNNTST_1", "model_name": "CNN_TEST", "loss_name": "Seperated_CE", "num_epochs": 5, "batch_size": 16, "learning_rate": 0.001}
