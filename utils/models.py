@@ -7,7 +7,7 @@ import numpy as np
 
 ############
 # 1D CNN
-# NOTE: currently using 1D vector as input; should I reshape to 8x8 and use 2D CNN instead? 
+#  - 1D vector as input; could also reshape to 8x8 and use 2D CNN instead 
 ############
 
 class Linear_1D(nn.Module):
@@ -67,7 +67,7 @@ class Linear_1D(nn.Module):
 
 class CNN_TEST(nn.Module):
     def __init__(self, num_piece_types=13, embedding_dim=16):
-        """s
+        """
         num_piece_types:
             e.g.
             0 = empty
