@@ -10,9 +10,9 @@ import argparse
 import json
 import os, shutil
 
-# run from Chess_Bot with 'python run_model.py -f exp_todo/exp_file.json'
+# run from Chess_Bot with 'python run_model.py -gpu False -f exp_todo/exp_file_unet.json'
 
-def run_model(d, test_only=False):
+def run_model(d, gpu, test_only=False):
 
     # Set out and data dirs
     name = d['name']
@@ -40,14 +40,16 @@ def run_model(d, test_only=False):
     data_utils.check_inputs(train_ds, train_loader)
         
     # Define model
-    device = torch.device('cpu') #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     xs0, ys0 = next(iter(train_loader))
     if d['model_name'] == 'Linear_1D':
         model = models.Linear_1D(in_channels=64, hidden_channels=d['hidden_channels'], num_classes=64).to(device)
     elif d['model_name'] == 'CNN_TEST':
-        model = models.CNN_TEST()
+        model = models.CNN_TEST(hidden_channels=d['hidden_channels']).to(device)
         if d['loss_name'] != 'Seperated_CE':
             raise ValueError(f'If model is CNN_TEST, loss must be Seperated_CE')
+    elif d['model_name'] == 'UNet':
+        model = models.UNet(hidden_channels=d['hidden_channels']).to(device)
    
     # Create outdir and train
     if not eval(str(test_only)):
@@ -59,7 +61,7 @@ def run_model(d, test_only=False):
         for epoch in range(d['num_epochs']):
             print(f'Epoch {epoch}', flush=True)
             loss = run_utils.train_net(train_loader, model,  d['loss_name'], optimizer, device=device, save_examples=True, save_dir=exp_outdir, epoch=epoch)
-            losses.append(loss.detach().numpy())
+            losses.append(loss.detach().cpu().numpy())
 
         # Save model
         torch.save(model.state_dict(), f'{exp_outdir}/{name}.pth')
@@ -70,8 +72,13 @@ def run_model(d, test_only=False):
     if d['model_name'] == 'Linear_1D':
         model = models.Linear_1D(in_channels=64, hidden_channels=d['hidden_channels'], num_classes=64).to(device)
     elif d['model_name'] == 'CNN_TEST':
-        model = models.CNN_TEST().to(device)
-    model.load_state_dict(torch.load(f'{exp_outdir}/{name}.pth'))
+        model = models.CNN_TEST(hidden_channels=d['hidden_channels']).to(device)
+    elif d['model_name'] == 'UNet':
+        model = models.UNet(hidden_channels=d['hidden_channels']).to(device)
+    try:
+        model.load_state_dict(torch.load(f'{exp_outdir}/{name}.pth'))
+    except RuntimeError:
+        model.load_state_dict(torch.load(f'{exp_outdir}/{name}.pth', map_location=torch.device('cpu')))
     run_utils.save_model_results(test_loader, save_dir=f'{exp_outdir}/test_preds' , model=model)
 
 
@@ -80,6 +87,7 @@ if __name__ == "__main__":
     # Read in arguements
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--f", type=str, required=True)
+    parser.add_argument("-gpu", "--gpu", type=str, required=True)
     args = parser.parse_args()
 
     # Iterate through experiments (or single experiment)
@@ -89,6 +97,6 @@ if __name__ == "__main__":
         exp_dicts = [exp_dicts]
     for d in exp_dicts:
         print(f'RUNNING EXPERIMENT {d["name"]} \nexp dict: {d}')
-        run_model(d)
+        run_model(d, args.gpu)
         print(f'DONE')
     print('FINISHED ALL EXPERIMENTS')
