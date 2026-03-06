@@ -1,0 +1,1 @@
+{"name": "UNET_2", "model_name": "UNet", "loss_name": "CE", "hidden_channels":[64, 128, 256], "num_epochs": 100, "batch_size": 16, "learning_rate": 0.001}
