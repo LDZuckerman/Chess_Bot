@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 import pandas as pd
 import json
+#from Chessnut import Game
 try:
     import  models, loss_funcs #, plot_utils
 except ModuleNotFoundError:
@@ -58,7 +59,7 @@ def train_net(loader, model, loss_name, optimizer, device, save_examples=False, 
     return loss 
 
 
-def save_model_results(val_loader, save_dir, model, device='cpu'):
+def save_model_results(val_loader, save_dir, model):
     '''
     Run each validation obs through model, save results
     '''
@@ -68,7 +69,8 @@ def save_model_results(val_loader, save_dir, model, device='cpu'):
     all_val_trues = []
     i = 0
     for X, y in val_loader:
-        X, y = X.to(device), y.to(device).detach().numpy()
+        X = X.to('cpu').detach()
+        y = y.to('cpu').detach().numpy()
         # if torch.is_tensor(y):
         #     y = y.cpu().detach().numpy()
         out = model(X).cpu().detach().numpy()
@@ -104,10 +106,11 @@ def get_modelDF(modeldir='', tag='', metrics=['CE']):
         if not os.path.exists(f'{modeldir}/{expdir}/exp_file.json'):
             print(f'Skipping {expdir}; no exp_file found')
             continue
-        exp_dict = json.load(open(f'{modeldir}/{expdir}/exp_file.json','rb'))
+        exp_dict = json.load(open(f'{modeldir}/{expdir}/exp_file.json','rb')) 
 
         # Set hidden_channels if missing
-        exp_dict['hidden_channels'] = "[32, 16, 32]" if 'hidden_channels' not in exp_dict else exp_dict['hidden_channels']
+        if exp_dict['model_name'] == 'Linear_1D': exp_dict['hidden_channels'] = "[32, 16, 32]" if 'hidden_channels' not in exp_dict else exp_dict['hidden_channels']
+        elif exp_dict['model_name'] == 'CNN_TEST': exp_dict['hidden_channels'] = "[64, 128, 128]"  if 'hidden_channels' not in exp_dict else exp_dict['hidden_channels']
         
         # Add val mse
         for metric in metrics:
@@ -142,19 +145,89 @@ def prediction_validation_results(output_dir, metric):
     Compute average error on validation predictions 
     '''
 
-    preds = np.load(f'{output_dir}/all_val_preds.npy')
-    trues = np.load(f'{output_dir}/all_val_trues.npy')
+    
+    preds = np.load(f'{output_dir}/all_val_preds.npy')#; print(f'{output_dir}/all_val_preds.npy', type(preds), preds.dtype)
+    trues = np.load(f'{output_dir}/all_val_trues.npy', allow_pickle=True)
 
     if metric == 'RMSE':
         out = np.sqrt(np.nanmean((trues-preds)**2))
 
     elif metric == 'CE':
         loss = nn.CrossEntropyLoss() 
-        out = loss(torch.tensor(preds).float(), torch.tensor(trues).float()).item()
+        try:
+            out = loss(torch.tensor(preds).float(), torch.tensor(trues).float()).item()
+        except TypeError:
+            out = 'Err'
         
     return out
 
 
 
 
+'''
+Functions for determining move validity
+'''
 
+def detect_invalid(inputs, preds):
+
+    #  Go from class probs to predicted class
+    preds = torch.from_numpy(np.argmax(preds.cpu().detach().numpy(), axis=2)).float() # get class with highest probability for move_from and move_to
+    inputs = torch.from_numpy(np.argmax(inputs.cpu().detach().numpy(), axis=2)).float() # collapse back
+
+    # Seperate from-square and to-sqaure preds and targets
+    from_preds = preds[:, 0, :]
+    to_preds = preds[:, 1, :] 
+
+    # 
+    out = preds.copy()
+    for i in range(len(preds.shape[0])):
+        board = inputs[i]; print(board.shape) # should be len 64
+        move_from = from_preds[i]; print(move_from) 
+        move_to =  to_preds[i]
+
+
+def board_to_fen(board, turn="w", castling="KQkq", ep="-", halfmove=0, fullmove=1):
+    fen_rows = []
+    
+    for rank in range(8):
+        row = ""
+        empty_count = 0
+        
+        for file in range(8):
+            value = board[rank * 8 + file]
+            piece = INT_TO_FEN[value]
+            
+            if piece is None:
+                empty_count += 1
+            else:
+                if empty_count > 0:
+                    row += str(empty_count)
+                    empty_count = 0
+                row += piece
+        
+        if empty_count > 0:
+            row += str(empty_count)
+        
+        fen_rows.append(row)
+    
+    fen_board = "/".join(fen_rows)
+    return f"{fen_board} {turn} {castling} {ep} {halfmove} {fullmove}"   
+
+def index_to_square(index):
+
+    file = index % 8
+    rank = 8 - (index // 8)
+    file_letter = chr(ord('a') + file)
+
+    return f"{file_letter}{rank}"
+
+def move_to_uci(start_idx, end_idx):
+    return index_to_square(start_idx) + index_to_square(end_idx)
+
+def is_legal_move(board_array, start_idx, end_idx, turn="w"):
+
+    fen = board_to_fen(board_array, turn=turn)
+    game = Game(fen)
+    move = move_to_uci(start_idx, end_idx)
+    
+    return move in game.get_moves()
