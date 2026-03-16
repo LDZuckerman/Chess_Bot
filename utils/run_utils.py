@@ -22,7 +22,7 @@ def train_net(loader, model, loss_name, optimizer, device, save_examples=False, 
     # Train on each batch in train loader
     k = 0
     for data, targets in loader: #batch_idx, (data, targets) in enumerate(loop):
-        print(f'  Batch {k}', end='\r', flush=True); k += 1
+        #print(f'  Batch {k}', end='\r', flush=True); k += 1
 
         # Set data to be on correct device
         data = data.to(device)
