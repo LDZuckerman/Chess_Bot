@@ -22,7 +22,12 @@ def train_net(loader, model, loss_name, optimizer, device, save_examples=False, 
     # Train on each batch in train loader
     k = 0
     for data, targets in loader: #batch_idx, (data, targets) in enumerate(loop):
-        #print(f'  Batch {k}', end='\r', flush=True); k += 1
+        # print(f'  Batch {k}', end='\r', flush=True); k += 1
+        # print(f'     {data.shape}')
+        
+        # Remove last batch if only one obs (otherwise causes issues in model)
+        if data.shape[0] != 16:
+            continue 
 
         # Set data to be on correct device
         data = data.to(device)
@@ -59,7 +64,7 @@ def train_net(loader, model, loss_name, optimizer, device, save_examples=False, 
     return loss 
 
 
-def save_model_results(val_loader, save_dir, model):
+def save_model_results(val_loader, save_dir, model, device):
     '''
     Run each validation obs through model, save results
     '''
@@ -69,8 +74,8 @@ def save_model_results(val_loader, save_dir, model):
     all_val_trues = []
     i = 0
     for X, y in val_loader:
-        X = X.to('cpu').detach()
-        y = y.to('cpu').detach().numpy()
+        X = X.to(device).detach()
+        y = y.cpu().detach().numpy()
         # if torch.is_tensor(y):
         #     y = y.cpu().detach().numpy()
         out = model(X).cpu().detach().numpy()
