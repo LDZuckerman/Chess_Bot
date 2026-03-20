@@ -94,7 +94,7 @@ class UNet(nn.Module):
         # Reshape to board image and add "channel" dim  
         x_in = x.clone()
         x = x.to(torch.float32); 
-        x = x.reshape(x.shape[0], 1, 8, 8)#; print('x', x.shape) 
+        x = x.reshape(x.shape[0], 1, 8, 8);# print('x', x.shape) 
 
         # Perform downs
         skip_connections = []#; i=0
@@ -109,7 +109,7 @@ class UNet(nn.Module):
         
         # Perform ups
         for idx in range(0, len(self.ups), 2): # step of 2 becasue add conv step
-            x = self.ups[idx](x)#; print(self.ups[idx], x.shape)
+            x = self.ups[idx](x); #print(self.ups[idx], x.shape)
             skip_connection = skip_connections[idx//2]
             if x.shape != skip_connection.shape:
                 x = TF.resize(x, size=skip_connection.shape[2:], antialias=None)

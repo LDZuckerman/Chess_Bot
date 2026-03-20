@@ -29,13 +29,11 @@ def run_model(d, gpu, test_only=False):
     json.dump(d, open(f'{exp_outdir}/exp_file.json','w'))
 
     # Get data
-    #### REMOVE THIS!!!
     debug_subset = False
-    ####
     print(f"Loading data", flush=True)
-    train_ds = data_utils.dataset(set='train', debug_subset=debug_subset)
+    train_ds = data_utils.dataset(set='train', dataset=d['dataset'], debug_subset=debug_subset)
     train_loader = DataLoader(train_ds, batch_size=d['batch_size'], pin_memory=True, shuffle=True)
-    test_ds = data_utils.dataset(set='val', debug_subset=debug_subset)
+    test_ds = data_utils.dataset(set='val', dataset=d['dataset'], debug_subset=debug_subset)
     test_loader = DataLoader(test_ds, batch_size=d['batch_size'], pin_memory=True, shuffle=False)
     data_utils.check_inputs(train_ds, train_loader)
         
@@ -79,7 +77,7 @@ def run_model(d, gpu, test_only=False):
         model.load_state_dict(torch.load(f'{exp_outdir}/{name}.pth'))
     except RuntimeError:
         model.load_state_dict(torch.load(f'{exp_outdir}/{name}.pth', map_location=torch.device('cpu')))
-    run_utils.save_model_results(test_loader, save_dir=f'{exp_outdir}/test_preds' , model=model)
+    run_utils.save_model_results(test_loader, save_dir=f'{exp_outdir}/test_preds' , model=model, device=device)
 
 
 if __name__ == "__main__":
