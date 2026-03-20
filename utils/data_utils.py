@@ -18,8 +18,9 @@ class dataset(Dataset):
     NOTE: currently using 1D vector as input; should I reshape to 8x8 and use 2D CNN instead?
     '''
 
-    def __init__(self, set, debug_subset=False): 
-        self.dpath = '../Data/CHESS_DATA_kaggle'
+    def __init__(self, set, dataset='lichess', debug_subset=False): 
+        self.dpath = f'../Data/CHESS_DATA_{dataset}'
+        print(self.dpath)
         all_data = pd.read_csv(f'{self.dpath}/CHESS_DATA_encoded.csv') # already normalized and 1-hot encoded
         if debug_subset:
             all_data = all_data[int(len(all_data)/8):]
@@ -109,7 +110,7 @@ def fen_to_state(fenstr):
 def uci_to_move(uci_string):
     
     positions_uci = [let+str(num) for let in ['a','b','c','d','e','f','g','h'] for num in [1,2,3,4,5,6,7,8]]
-    pos_map = dict(zip(positions_uci, np.linspace(1,64,64, dtype=int)))
+    pos_map = dict(zip(positions_uci, np.linspace(0,63,64, dtype=int)))
     move_from = pos_map[uci_string[:2]]
     move_to = pos_map[uci_string[2:4]]
     
